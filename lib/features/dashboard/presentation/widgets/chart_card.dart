@@ -69,21 +69,7 @@ class ChartCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: child,
-                  ),
-                );
-              },
-            ),
-          ),
+          Expanded(child: child),
         ],
       ),
     );

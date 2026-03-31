@@ -26,7 +26,8 @@ class PartiesEvolutionChart extends StatelessWidget {
       return FlSpot(entry.key.toDouble(), entry.value.parties.toDouble());
     }).toList();
 
-    final maxY = data.isEmpty ? 1.0 : data.map((d) => d.parties).reduce((a, b) => a > b ? a : b).toDouble();
+    final rawMaxY = data.isEmpty ? 1.0 : data.map((d) => d.parties).reduce((a, b) => a > b ? a : b).toDouble();
+    final maxY = rawMaxY > 0 ? rawMaxY : 1.0;
 
     return LineChart(
       LineChartData(
@@ -85,7 +86,7 @@ class PartiesEvolutionChart extends StatelessWidget {
         ),
         borderData: FlBorderData(show: false),
         minX: 0,
-        maxX: data.isEmpty ? 1 : (data.length - 1).toDouble(),
+        maxX: data.length <= 1 ? 1.0 : (data.length - 1).toDouble(),
         minY: 0,
         maxY: maxY * 1.2,
         lineBarsData: [

@@ -21,7 +21,8 @@ class PlayersByCountryChart extends StatelessWidget {
   }
 
   Widget _buildList() {
-    final maxValue = data.isEmpty ? 1 : data.map((d) => d.joueurs).reduce((a, b) => a > b ? a : b);
+    final rawMaxValue = data.isEmpty ? 1 : data.map((d) => d.joueurs).reduce((a, b) => a > b ? a : b);
+    final maxValue = rawMaxValue > 0 ? rawMaxValue : 1;
     final colors = [
       AppTheme.primaryGreen,
       const Color(0xFF4CAF50),

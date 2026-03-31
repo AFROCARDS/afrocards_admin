@@ -211,18 +211,20 @@ class _DashboardContent extends StatelessWidget {
           );
         }
         
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 2,
-              child: UsersEvolutionChart(data: state.usersEvolution),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: UsersDistributionChart(data: state.usersDistribution),
-            ),
-          ],
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                flex: 2,
+                child: UsersEvolutionChart(data: state.usersEvolution),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: UsersDistributionChart(data: state.usersDistribution),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -241,17 +243,19 @@ class _DashboardContent extends StatelessWidget {
           );
         }
         
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: QuestionsByCategoryChart(data: state.questionsByCategory),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: PlayersByCountryChart(data: state.playersByCountry),
-            ),
-          ],
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: QuestionsByCategoryChart(data: state.questionsByCategory),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: PlayersByCountryChart(data: state.playersByCountry),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -270,18 +274,20 @@ class _DashboardContent extends StatelessWidget {
           );
         }
         
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 2,
-              child: PartiesEvolutionChart(data: state.partiesEvolution),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: TopPlayersCard(players: state.topPlayers),
-            ),
-          ],
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                flex: 2,
+                child: PartiesEvolutionChart(data: state.partiesEvolution),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: TopPlayersCard(players: state.topPlayers),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -315,21 +321,23 @@ class _DashboardContent extends StatelessWidget {
           );
         }
         
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (state.challengesStats != null)
-              Expanded(child: ChallengesStatsCard(stats: state.challengesStats!)),
-            if (state.challengesStats != null) const SizedBox(width: 24),
-            if (state.signalements != null)
-              Expanded(child: SignalementsCard(stats: state.signalements!)),
-            if (state.signalements != null) const SizedBox(width: 24),
-            if (state.recentActivity != null)
-              Expanded(
-                flex: 2,
-                child: RecentActivityCard(activity: state.recentActivity!),
-              ),
-          ],
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (state.challengesStats != null)
+                Expanded(child: ChallengesStatsCard(stats: state.challengesStats!)),
+              if (state.challengesStats != null) const SizedBox(width: 24),
+              if (state.signalements != null)
+                Expanded(child: SignalementsCard(stats: state.signalements!)),
+              if (state.signalements != null) const SizedBox(width: 24),
+              if (state.recentActivity != null)
+                Expanded(
+                  flex: 2,
+                  child: RecentActivityCard(activity: state.recentActivity!),
+                ),
+            ],
+          ),
         );
       },
     );

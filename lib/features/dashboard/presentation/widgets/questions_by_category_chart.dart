@@ -22,7 +22,8 @@ class QuestionsByCategoryChart extends StatelessWidget {
   }
 
   Widget _buildChart() {
-    final maxY = data.isEmpty ? 1.0 : data.map((d) => d.questions).reduce((a, b) => a > b ? a : b).toDouble();
+    final rawMaxY = data.isEmpty ? 1.0 : data.map((d) => d.questions).reduce((a, b) => a > b ? a : b).toDouble();
+    final maxY = rawMaxY > 0 ? rawMaxY : 1.0;
 
     return BarChart(
       BarChartData(
