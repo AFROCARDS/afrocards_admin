@@ -6,6 +6,7 @@ class DashboardRepository {
 
   DashboardRepository(this._apiClient);
 
+  // Stats globales du dashboard
   Future<DashboardStats> getDashboardStats() async {
     try {
       final response = await _apiClient.get('/admin/dashboard');
@@ -20,81 +21,154 @@ class DashboardRepository {
     }
   }
 
-  Future<List<ChartDataPoint>> getActiveUsersEvolution({int days = 30}) async {
+  // Evolution des inscriptions par mois
+  Future<List<UserEvolutionData>> getUsersEvolution({int months = 12}) async {
     try {
-      // Endpoint personnalisé pour l'évolution des utilisateurs actifs
       final response = await _apiClient.get('/admin/stats/users-evolution', queryParameters: {
+        'months': months,
+      });
+
+      if (response.data['success'] == true) {
+        final List<dynamic> data = response.data['data'] ?? [];
+        return data.map((item) => UserEvolutionData.fromJson(item)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Erreur getUsersEvolution: $e');
+      return [];
+    }
+  }
+
+  // Evolution des parties par jour
+  Future<List<PartiesEvolutionData>> getPartiesEvolution({int days = 30}) async {
+    try {
+      final response = await _apiClient.get('/admin/stats/parties-evolution', queryParameters: {
         'days': days,
       });
 
       if (response.data['success'] == true) {
         final List<dynamic> data = response.data['data'] ?? [];
-        return data.map((item) => ChartDataPoint(
-          date: DateTime.parse(item['date']),
-          value: (item['count'] as num).toDouble(),
-        )).toList();
+        return data.map((item) => PartiesEvolutionData.fromJson(item)).toList();
       }
-      
-      // Données de fallback si l'endpoint n'existe pas encore
-      return _generateMockEvolutionData(days);
+      return [];
     } catch (e) {
-      // Retourner des données mock en cas d'erreur
-      return _generateMockEvolutionData(days);
+      print('Erreur getPartiesEvolution: $e');
+      return [];
     }
   }
 
-  Future<List<CategoryChartData>> getQuizByCategory({int days = 30}) async {
+  // Questions par catégorie
+  Future<List<CategoryStats>> getQuestionsByCategory() async {
     try {
-      final response = await _apiClient.get('/admin/stats/quiz-by-category', queryParameters: {
-        'days': days,
+      final response = await _apiClient.get('/admin/stats/questions-by-category');
+
+      if (response.data['success'] == true) {
+        final List<dynamic> data = response.data['data'] ?? [];
+        return data.map((item) => CategoryStats.fromJson(item)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Erreur getQuestionsByCategory: $e');
+      return [];
+    }
+  }
+
+  // Top joueurs
+  Future<List<TopPlayer>> getTopPlayers({int limit = 10}) async {
+    try {
+      final response = await _apiClient.get('/admin/stats/top-players', queryParameters: {
+        'limit': limit,
       });
 
       if (response.data['success'] == true) {
         final List<dynamic> data = response.data['data'] ?? [];
-        return data.map((item) => CategoryChartData(
-          category: item['category'],
-          value: (item['count'] as num).toDouble(),
-        )).toList();
+        return data.map((item) => TopPlayer.fromJson(item)).toList();
       }
-      
-      return _generateMockCategoryData();
+      return [];
     } catch (e) {
-      return _generateMockCategoryData();
+      print('Erreur getTopPlayers: $e');
+      return [];
     }
   }
 
-  Future<int> getSignalementsCount() async {
+  // Stats signalements
+  Future<SignalementsStats?> getSignalementsStats() async {
     try {
-      final response = await _apiClient.get('/admin/signalements/count');
+      final response = await _apiClient.get('/admin/stats/signalements');
 
       if (response.data['success'] == true) {
-        return response.data['data']['count'] ?? 0;
+        return SignalementsStats.fromJson(response.data['data']);
       }
-      return 0;
+      return null;
     } catch (e) {
-      return 0;
+      print('Erreur getSignalementsStats: $e');
+      return null;
     }
   }
 
-  // Données mock pour le développement
-  List<ChartDataPoint> _generateMockEvolutionData(int days) {
-    final now = DateTime.now();
-    final data = <ChartDataPoint>[];
-    
-    for (int i = days; i >= 0; i -= 7) {
-      final date = now.subtract(Duration(days: i));
-      final value = 1000 + (i * 50) + (i % 3 * 200);
-      data.add(ChartDataPoint(date: date, value: value.toDouble()));
+  // Distribution utilisateurs par type
+  Future<List<UserDistribution>> getUsersDistribution() async {
+    try {
+      final response = await _apiClient.get('/admin/stats/users-distribution');
+
+      if (response.data['success'] == true) {
+        final List<dynamic> data = response.data['data'] ?? [];
+        return data.map((item) => UserDistribution.fromJson(item)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Erreur getUsersDistribution: $e');
+      return [];
     }
-    
-    return data;
   }
 
-  List<CategoryChartData> _generateMockCategoryData() {
-    return [
-      CategoryChartData(category: 'Histoire', value: 15000),
-      CategoryChartData(category: 'Géographie', value: 22000),
-      CategoryChartData(category: 'Culture', value: 44500),
-    ];
+  // Joueurs par pays
+  Future<List<CountryStats>> getPlayersByCountry({int limit = 10}) async {
+    try {
+      final response = await _apiClient.get('/admin/stats/players-by-country', queryParameters: {
+        'limit': limit,
+      });
+
+      if (response.data['success'] == true) {
+        final List<dynamic> data = response.data['data'] ?? [];
+        return data.map((item) => CountryStats.fromJson(item)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Erreur getPlayersByCountry: $e');
+      return [];
+    }
+  }
+
+  // Activité récente
+  Future<RecentActivity?> getRecentActivity({int limit = 10}) async {
+    try {
+      final response = await _apiClient.get('/admin/stats/recent-activity', queryParameters: {
+        'limit': limit,
+      });
+
+      if (response.data['success'] == true) {
+        return RecentActivity.fromJson(response.data['data']);
+      }
+      return null;
+    } catch (e) {
+      print('Erreur getRecentActivity: $e');
+      return null;
+    }
+  }
+
+  // Stats challenges sponsorisés
+  Future<ChallengesSponsorisesStats?> getChallengesSponsorisesStats() async {
+    try {
+      final response = await _apiClient.get('/admin/stats/challenges-sponsorises');
+
+      if (response.data['success'] == true) {
+        return ChallengesSponsorisesStats.fromJson(response.data['data']);
+      }
+      return null;
+    } catch (e) {
+      print('Erreur getChallengesSponsorisesStats: $e');
+      return null;
+    }
   }
 }

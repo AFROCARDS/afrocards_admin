@@ -14,15 +14,6 @@ class DashboardLoadRequested extends DashboardEvent {}
 
 class DashboardRefreshRequested extends DashboardEvent {}
 
-class DashboardPeriodChanged extends DashboardEvent {
-  final int days;
-  
-  DashboardPeriodChanged(this.days);
-  
-  @override
-  List<Object?> get props => [days];
-}
-
 // States
 abstract class DashboardState extends Equatable {
   @override
@@ -35,37 +26,35 @@ class DashboardLoading extends DashboardState {}
 
 class DashboardLoaded extends DashboardState {
   final DashboardStats stats;
-  final List<ChartDataPoint> usersEvolution;
-  final List<CategoryChartData> quizByCategory;
-  final int signalements;
-  final int selectedPeriod;
+  final List<UserEvolutionData> usersEvolution;
+  final List<PartiesEvolutionData> partiesEvolution;
+  final List<CategoryStats> questionsByCategory;
+  final List<TopPlayer> topPlayers;
+  final List<UserDistribution> usersDistribution;
+  final List<CountryStats> playersByCountry;
+  final SignalementsStats? signalements;
+  final RecentActivity? recentActivity;
+  final ChallengesSponsorisesStats? challengesStats;
 
   DashboardLoaded({
     required this.stats,
     required this.usersEvolution,
-    required this.quizByCategory,
-    required this.signalements,
-    this.selectedPeriod = 30,
+    required this.partiesEvolution,
+    required this.questionsByCategory,
+    required this.topPlayers,
+    required this.usersDistribution,
+    required this.playersByCountry,
+    this.signalements,
+    this.recentActivity,
+    this.challengesStats,
   });
 
   @override
-  List<Object?> get props => [stats, usersEvolution, quizByCategory, signalements, selectedPeriod];
-
-  DashboardLoaded copyWith({
-    DashboardStats? stats,
-    List<ChartDataPoint>? usersEvolution,
-    List<CategoryChartData>? quizByCategory,
-    int? signalements,
-    int? selectedPeriod,
-  }) {
-    return DashboardLoaded(
-      stats: stats ?? this.stats,
-      usersEvolution: usersEvolution ?? this.usersEvolution,
-      quizByCategory: quizByCategory ?? this.quizByCategory,
-      signalements: signalements ?? this.signalements,
-      selectedPeriod: selectedPeriod ?? this.selectedPeriod,
-    );
-  }
+  List<Object?> get props => [
+    stats, usersEvolution, partiesEvolution, questionsByCategory, 
+    topPlayers, usersDistribution, playersByCountry, signalements,
+    recentActivity, challengesStats
+  ];
 }
 
 class DashboardError extends DashboardState {
@@ -86,7 +75,6 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         super(DashboardInitial()) {
     on<DashboardLoadRequested>(_onLoadRequested);
     on<DashboardRefreshRequested>(_onRefreshRequested);
-    on<DashboardPeriodChanged>(_onPeriodChanged);
   }
 
   Future<void> _onLoadRequested(
@@ -94,43 +82,43 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     Emitter<DashboardState> emit,
   ) async {
     emit(DashboardLoading());
-    await _loadDashboard(emit, 30);
+    await _loadDashboard(emit);
   }
 
   Future<void> _onRefreshRequested(
     DashboardRefreshRequested event,
     Emitter<DashboardState> emit,
   ) async {
-    final currentState = state;
-    final period = currentState is DashboardLoaded ? currentState.selectedPeriod : 30;
-    await _loadDashboard(emit, period);
+    await _loadDashboard(emit);
   }
 
-  Future<void> _onPeriodChanged(
-    DashboardPeriodChanged event,
-    Emitter<DashboardState> emit,
-  ) async {
-    if (state is DashboardLoaded) {
-      emit(DashboardLoading());
-      await _loadDashboard(emit, event.days);
-    }
-  }
-
-  Future<void> _loadDashboard(Emitter<DashboardState> emit, int days) async {
+  Future<void> _loadDashboard(Emitter<DashboardState> emit) async {
     try {
+      // Charger toutes les données en parallèle
       final results = await Future.wait([
         _repository.getDashboardStats(),
-        _repository.getActiveUsersEvolution(days: days),
-        _repository.getQuizByCategory(days: days),
-        _repository.getSignalementsCount(),
+        _repository.getUsersEvolution(months: 12),
+        _repository.getPartiesEvolution(days: 30),
+        _repository.getQuestionsByCategory(),
+        _repository.getTopPlayers(limit: 5),
+        _repository.getUsersDistribution(),
+        _repository.getPlayersByCountry(limit: 8),
+        _repository.getSignalementsStats(),
+        _repository.getRecentActivity(limit: 5),
+        _repository.getChallengesSponsorisesStats(),
       ]);
 
       emit(DashboardLoaded(
         stats: results[0] as DashboardStats,
-        usersEvolution: results[1] as List<ChartDataPoint>,
-        quizByCategory: results[2] as List<CategoryChartData>,
-        signalements: results[3] as int,
-        selectedPeriod: days,
+        usersEvolution: results[1] as List<UserEvolutionData>,
+        partiesEvolution: results[2] as List<PartiesEvolutionData>,
+        questionsByCategory: results[3] as List<CategoryStats>,
+        topPlayers: results[4] as List<TopPlayer>,
+        usersDistribution: results[5] as List<UserDistribution>,
+        playersByCountry: results[6] as List<CountryStats>,
+        signalements: results[7] as SignalementsStats?,
+        recentActivity: results[8] as RecentActivity?,
+        challengesStats: results[9] as ChallengesSponsorisesStats?,
       ));
     } catch (e) {
       emit(DashboardError(e.toString()));
