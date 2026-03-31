@@ -3,7 +3,7 @@ class AppConfig {
   static const String appVersion = '1.0.0';
   
   // API Configuration - À ajuster selon ton environnement
-  static const String baseUrl = 'http://localhost:3000/api';
+  static const String baseUrl = 'http://localhost:5000/api';
   
   // Pagination
   static const int defaultPageSize = 20;

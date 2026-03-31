@@ -37,7 +37,9 @@ class AuthRepository {
       if (e.toString().contains('Accès refusé')) {
         rethrow;
       }
-      throw Exception('Email ou mot de passe incorrect');
+      // Afficher l'erreur réelle pour le debug
+      print('Erreur login: $e');
+      rethrow;
     }
   }
 
