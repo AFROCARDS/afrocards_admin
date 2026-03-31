@@ -25,12 +25,20 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
+          print('🌐 REQUEST: ${options.method} ${options.uri}');
+          print('📦 DATA: ${options.data}');
           if (_authToken != null) {
             options.headers['Authorization'] = 'Bearer $_authToken';
           }
           return handler.next(options);
         },
+        onResponse: (response, handler) {
+          print('✅ RESPONSE: ${response.statusCode}');
+          return handler.next(response);
+        },
         onError: (error, handler) {
+          print('❌ ERROR: ${error.message}');
+          print('❌ URL: ${error.requestOptions.uri}');
           // Handle 401 errors (unauthorized)
           if (error.response?.statusCode == 401) {
             // TODO: Redirect to login
