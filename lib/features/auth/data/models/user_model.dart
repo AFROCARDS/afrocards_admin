@@ -42,8 +42,14 @@ class UserModel {
   }
 
   bool get isAdmin => typeUtilisateur == 'admin';
+  bool get isModerateur => typeUtilisateur == 'moderateur';
   bool get isPartenaire => typeUtilisateur == 'partenaire';
   bool get isJoueur => typeUtilisateur == 'joueur';
+  
+  /// L'admin peut tout faire, le modérateur peut seulement voir
+  bool get canEdit => isAdmin;
+  bool get canDelete => isAdmin;
+  bool get canChangeRoles => isAdmin;
   
   String get displayName {
     if (joueur?.pseudo != null && joueur!.pseudo!.isNotEmpty) {

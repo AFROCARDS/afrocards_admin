@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:afrocards_admin/config/routes.dart';
 import 'package:afrocards_admin/config/theme.dart';
 import 'package:afrocards_admin/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:afrocards_admin/features/users/presentation/bloc/users_bloc.dart';
 import 'package:afrocards_admin/core/network/api_client.dart';
 
 void main() {
@@ -18,6 +19,7 @@ class AfroCardsAdminApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => AuthBloc(ApiClient())),
+        BlocProvider(create: (_) => UsersBloc()),
       ],
       child: MaterialApp.router(
         title: 'AfroCards Admin',

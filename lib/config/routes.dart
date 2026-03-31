@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:afrocards_admin/shared/layouts/admin_layout.dart';
 import 'package:afrocards_admin/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:afrocards_admin/features/auth/presentation/screens/login_screen.dart';
+import 'package:afrocards_admin/features/users/presentation/screens/users_list_screen.dart';
+import 'package:afrocards_admin/features/users/presentation/screens/users_roles_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -36,7 +38,12 @@ class AppRouter {
           GoRoute(
             path: '/users',
             name: 'users',
-            builder: (context, state) => const _PlaceholderScreen(title: 'Gestion Utilisateurs'),
+            builder: (context, state) => const UsersListScreen(),
+          ),
+          GoRoute(
+            path: '/users/roles',
+            name: 'users-roles',
+            builder: (context, state) => const UsersRolesScreen(),
           ),
           GoRoute(
             path: '/questions',
@@ -52,6 +59,11 @@ class AppRouter {
             path: '/challenges',
             name: 'challenges',
             builder: (context, state) => const _PlaceholderScreen(title: 'Challenges / Evenements'),
+          ),
+          GoRoute(
+            path: '/wheel',
+            name: 'wheel',
+            builder: (context, state) => const _PlaceholderScreen(title: 'Roue Magique'),
           ),
           GoRoute(
             path: '/shop',

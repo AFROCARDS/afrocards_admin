@@ -137,6 +137,12 @@ class _Sidebar extends StatelessWidget {
                   currentPath: currentPath,
                 ),
                 _SidebarItem(
+                  icon: LucideIcons.disc,
+                  label: 'Roue magique',
+                  path: '/wheel',
+                  currentPath: currentPath,
+                ),
+                _SidebarItem(
                   icon: LucideIcons.store,
                   label: 'Boutique',
                   path: '/shop',
@@ -147,8 +153,8 @@ class _Sidebar extends StatelessWidget {
                   label: 'Gestion Utilisateurs',
                   currentPath: currentPath,
                   children: [
-                    _SidebarSubItem(label: 'Tous les utilisateurs', path: '/users', currentPath: currentPath),
-                    _SidebarSubItem(label: 'Partenaires', path: '/partners', currentPath: currentPath),
+                    _SidebarSubItem(label: 'Liste des Utili...', path: '/users', currentPath: currentPath),
+                    _SidebarSubItem(label: 'Gestion des Rôles', path: '/users/roles', currentPath: currentPath),
                   ],
                 ),
               ],
