@@ -57,9 +57,9 @@ class _UsersListScreenState extends State<UsersListScreen> {
           _buildHeader(),
           const SizedBox(height: 24),
           
-          // Table des utilisateurs
+          // Liste des joueurs
           Expanded(
-            child: _buildUsersTable(),
+            child: _buildPlayersList(),
           ),
         ],
       ),
@@ -106,11 +106,11 @@ class _UsersListScreenState extends State<UsersListScreen> {
         _buildFilterDropdown(),
         const SizedBox(width: 12),
         
-        // Export
+        // Refresh
         _buildIconButton(
-          icon: LucideIcons.mail,
-          onTap: () {},
-          tooltip: 'Envoyer un email groupé',
+          icon: LucideIcons.refreshCw,
+          onTap: () => context.read<UsersBloc>().add(const UsersLoadRequested(refresh: true)),
+          tooltip: 'Actualiser',
         ),
       ],
     );
@@ -135,12 +135,12 @@ class _UsersListScreenState extends State<UsersListScreen> {
               Text('Filtrer', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
             ],
           ),
-          items: [
-            const DropdownMenuItem(value: null, child: Text('Tous')),
-            const DropdownMenuItem(value: 'joueur', child: Text('Joueurs')),
-            const DropdownMenuItem(value: 'admin', child: Text('Admins')),
-            const DropdownMenuItem(value: 'moderateur', child: Text('Modérateurs')),
-            const DropdownMenuItem(value: 'partenaire', child: Text('Partenaires')),
+          items: const [
+            DropdownMenuItem(value: null, child: Text('Tous')),
+            DropdownMenuItem(value: 'joueur', child: Text('Joueurs')),
+            DropdownMenuItem(value: 'admin', child: Text('Admins')),
+            DropdownMenuItem(value: 'moderateur', child: Text('Modérateurs')),
+            DropdownMenuItem(value: 'partenaire', child: Text('Partenaires')),
           ],
           onChanged: _onFilterChanged,
         ),
@@ -172,7 +172,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
     );
   }
 
-  Widget _buildUsersTable() {
+  Widget _buildPlayersList() {
     return BlocBuilder<UsersBloc, UsersState>(
       builder: (context, state) {
         if (state.status == UsersStatus.loading && state.users.isEmpty) {
@@ -203,7 +203,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -211,275 +211,72 @@ class _UsersListScreenState extends State<UsersListScreen> {
           ),
           child: Column(
             children: [
-              // En-tête du tableau
-              _buildTableHeader(),
+              // Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Color(0xFFE5E5E5)),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(LucideIcons.users, size: 20, color: AppTheme.primaryGreen),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Joueurs',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${state.totalUsers} utilisateurs',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.primaryGreen,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               
-              // Corps du tableau
+              // Liste des joueurs
               Expanded(
                 child: state.users.isEmpty
                     ? _buildEmptyState()
-                    : ListView.separated(
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(12),
                         itemCount: state.users.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (context, index) {
-                          return _buildUserRow(state.users[index]);
+                          return _PlayerListItem(
+                            user: state.users[index],
+                            index: index,
+                            onView: () => _showUserDetails(state.users[index]),
+                            onEdit: () => _showEditDialog(state.users[index]),
+                            onDelete: () => _showDeleteConfirmation(state.users[index]),
+                            onEmail: () => _sendEmail(state.users[index]),
+                          );
                         },
                       ),
               ),
               
               // Footer avec pagination
-              _buildTableFooter(state),
+              _buildPagination(state),
             ],
           ),
         );
       },
-    );
-  }
-
-  Widget _buildTableHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFE5E5E5)),
-        ),
-      ),
-      child: const Row(
-        children: [
-          SizedBox(width: 60, child: Text('Img', style: _headerStyle)),
-          SizedBox(width: 80, child: Text('Id', style: _headerStyle)),
-          Expanded(flex: 2, child: Text('Username', style: _headerStyle)),
-          Expanded(flex: 3, child: Text('Email', style: _headerStyle)),
-          SizedBox(width: 100, child: Text('Pays', style: _headerStyle)),
-          SizedBox(width: 100, child: Text('Statistics', style: _headerStyle)),
-          SizedBox(width: 80, child: Text('Ranking', style: _headerStyle)),
-          SizedBox(width: 140, child: Text('Actions', style: _headerStyle)),
-        ],
-      ),
-    );
-  }
-
-  static const _headerStyle = TextStyle(
-    fontSize: 13,
-    fontWeight: FontWeight.w600,
-    color: AppTheme.textSecondary,
-  );
-
-  Widget _buildUserRow(UserAdmin user) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Row(
-        children: [
-          // Avatar
-          SizedBox(
-            width: 60,
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: AppTheme.primaryYellow.withOpacity(0.2),
-              backgroundImage: user.avatar.isNotEmpty ? NetworkImage(user.avatar) : null,
-              child: user.avatar.isEmpty
-                  ? Text(
-                      user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
-                      style: const TextStyle(
-                        color: AppTheme.primaryYellow,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : null,
-            ),
-          ),
-          
-          // ID
-          SizedBox(
-            width: 80,
-            child: Text(
-              '#${user.id}',
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ),
-          
-          // Username
-          Expanded(
-            flex: 2,
-            child: Text(
-              user.displayName,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ),
-          
-          // Email
-          Expanded(
-            flex: 3,
-            child: Text(
-              user.email,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ),
-          
-          // Pays
-          SizedBox(
-            width: 100,
-            child: Text(
-              user.pays,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ),
-          
-          // Statistics (mini graph placeholder)
-          SizedBox(
-            width: 100,
-            child: _buildMiniStats(user),
-          ),
-          
-          // Ranking
-          SizedBox(
-            width: 80,
-            child: Text(
-              user.ranking > 0 ? '#${user.ranking}' : '-',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ),
-          
-          // Actions
-          SizedBox(
-            width: 140,
-            child: _buildActionButtons(user),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons(UserAdmin user) {
-    // Récupérer les permissions de l'utilisateur connecté
-    final authState = context.read<AuthBloc>().state;
-    final canEdit = authState is AuthAuthenticated ? authState.user.canEdit : false;
-    final canDelete = authState is AuthAuthenticated ? authState.user.canDelete : false;
-
-    return Row(
-      children: [
-        // Modifier - seulement pour admin
-        if (canEdit)
-          _buildActionButton(
-            icon: LucideIcons.pencil,
-            color: AppTheme.primaryYellow,
-            onTap: () => _showEditDialog(user),
-            tooltip: 'Modifier',
-          ),
-        if (canEdit) const SizedBox(width: 8),
-        
-        // Voir - tout le monde peut voir
-        _buildActionButton(
-          icon: LucideIcons.eye,
-          color: AppTheme.primaryGreen,
-          onTap: () => _showUserDetails(user),
-          tooltip: 'Voir détails',
-        ),
-        const SizedBox(width: 8),
-        
-        // Supprimer - seulement pour admin
-        if (canDelete)
-          _buildActionButton(
-            icon: LucideIcons.trash2,
-            color: AppTheme.primaryRed,
-            onTap: () => _showDeleteConfirmation(user),
-            tooltip: 'Supprimer',
-          ),
-        if (canDelete) const SizedBox(width: 8),
-        
-        // Email - tout le monde peut envoyer
-        _buildActionButton(
-          icon: LucideIcons.mail,
-          color: Colors.blue,
-          onTap: () => _sendEmail(user),
-          tooltip: 'Envoyer email',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMiniStats(UserAdmin user) {
-    // Mini graphique de stats (barres de progression)
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildMiniProgressBar(
-                value: user.partiesGagnees / (user.partiesJouees > 0 ? user.partiesJouees : 1),
-                color: AppTheme.primaryGreen,
-              ),
-              const SizedBox(height: 4),
-              _buildMiniProgressBar(
-                value: (user.niveau / 100).clamp(0.0, 1.0),
-                color: AppTheme.primaryYellow,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMiniProgressBar({required double value, required Color color}) {
-    return Container(
-      height: 6,
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(3),
-      ),
-      child: FractionallySizedBox(
-        alignment: Alignment.centerLeft,
-        widthFactor: value.clamp(0.0, 1.0),
-        child: Container(
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(3),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-    String? tooltip,
-  }) {
-    return Tooltip(
-      message: tooltip ?? '',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(icon, size: 14, color: color),
-        ),
-      ),
     );
   }
 
@@ -502,9 +299,9 @@ class _UsersListScreenState extends State<UsersListScreen> {
     );
   }
 
-  Widget _buildTableFooter(UsersState state) {
+  Widget _buildPagination(UsersState state) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
         border: Border(
           top: BorderSide(color: Color(0xFFE5E5E5)),
@@ -513,7 +310,6 @@ class _UsersListScreenState extends State<UsersListScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Bouton page précédente
           if (state.currentPage > 1)
             TextButton.icon(
               onPressed: () {
@@ -529,7 +325,6 @@ class _UsersListScreenState extends State<UsersListScreen> {
           
           const SizedBox(width: 16),
           
-          // Indicateur pages
           Text(
             'Page ${state.currentPage} sur ${state.totalPages}',
             style: TextStyle(
@@ -540,9 +335,8 @@ class _UsersListScreenState extends State<UsersListScreen> {
           
           const SizedBox(width: 16),
           
-          // Bouton Voir tout / page suivante
           if (state.currentPage < state.totalPages)
-            TextButton.icon(
+            TextButton(
               onPressed: () {
                 context.read<UsersBloc>().add(UsersLoadRequested(
                   page: state.currentPage + 1,
@@ -550,24 +344,16 @@ class _UsersListScreenState extends State<UsersListScreen> {
                   search: state.search,
                 ));
               },
-              icon: const Row(
+              child: const Row(
                 children: [
-                  Text('•••'),
-                  SizedBox(width: 8),
+                  Text('Voir plus'),
+                  SizedBox(width: 4),
+                  Icon(LucideIcons.chevronRight, size: 16),
                 ],
               ),
-              label: const Text('Voir tout'),
             ),
         ],
       ),
-    );
-  }
-
-  // Dialogs
-  void _showEditDialog(UserAdmin user) {
-    showDialog(
-      context: context,
-      builder: (context) => _UserEditDialog(user: user),
     );
   }
 
@@ -578,12 +364,27 @@ class _UsersListScreenState extends State<UsersListScreen> {
     );
   }
 
+  void _showEditDialog(UserAdmin user) {
+    final authState = context.read<AuthBloc>().state;
+    final canEdit = authState is AuthAuthenticated ? authState.user.canEdit : false;
+    if (!canEdit) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => _UserEditDialog(user: user, bloc: context.read<UsersBloc>()),
+    );
+  }
+
   void _showDeleteConfirmation(UserAdmin user) {
+    final authState = context.read<AuthBloc>().state;
+    final canDelete = authState is AuthAuthenticated ? authState.user.canDelete : false;
+    if (!canDelete) return;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer l\'utilisateur "${user.displayName}" ?'),
+        content: Text('Voulez-vous vraiment supprimer "${user.displayName}" ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -603,18 +404,326 @@ class _UsersListScreenState extends State<UsersListScreen> {
   }
 
   void _sendEmail(UserAdmin user) {
-    // TODO: Implémenter l'envoi d'email
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Envoi d\'email à ${user.email}')),
     );
   }
 }
 
-// Dialog pour éditer un utilisateur
+// ============================================
+// PLAYER LIST ITEM (Style Top Joueurs)
+// ============================================
+
+class _PlayerListItem extends StatelessWidget {
+  final UserAdmin user;
+  final int index;
+  final VoidCallback onView;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onEmail;
+
+  const _PlayerListItem({
+    required this.user,
+    required this.index,
+    required this.onView,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onEmail,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Couleurs selon le rang
+    final colors = [
+      const Color(0xFFFFD700), // Gold
+      const Color(0xFFC0C0C0), // Silver
+      const Color(0xFFCD7F32), // Bronze
+      AppTheme.textMuted,
+      AppTheme.textMuted,
+    ];
+
+    final authState = context.read<AuthBloc>().state;
+    final canEdit = authState is AuthAuthenticated ? authState.user.canEdit : false;
+    final canDelete = authState is AuthAuthenticated ? authState.user.canDelete : false;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: index < 3 ? colors[index].withValues(alpha: 0.08) : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: index < 3 
+            ? Border.all(color: colors[index].withValues(alpha: 0.3), width: 1)
+            : null,
+      ),
+      child: Row(
+        children: [
+          // Rang
+          Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: colors[index < 5 ? index : 4],
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '${user.ranking > 0 ? user.ranking : index + 1}',
+              style: TextStyle(
+                color: index < 3 ? Colors.white : AppTheme.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          
+          // Avatar
+          CircleAvatar(
+            radius: 22,
+            backgroundImage: user.avatar.isNotEmpty ? NetworkImage(user.avatar) : null,
+            backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.2),
+            child: user.avatar.isEmpty
+                ? Text(
+                    user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      color: AppTheme.primaryGreen,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 16),
+          
+          // Infos joueur
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      user.displayName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildRoleBadge(user.typeUtilisateur),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(LucideIcons.mail, size: 12, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Text(
+                      user.email,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          // Stats
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryYellow.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(LucideIcons.star, size: 14, color: AppTheme.primaryYellow),
+                const SizedBox(width: 4),
+                Text(
+                  'Niv. ${user.niveau}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: AppTheme.primaryYellow,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          
+          // Pays
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.blue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(LucideIcons.mapPin, size: 14, color: Colors.blue),
+                const SizedBox(width: 4),
+                Text(
+                  user.pays,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.blue,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          
+          // XP / Score
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${_formatScore(user.xp)} XP',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: AppTheme.primaryGreen,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          
+          // Actions
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (canEdit)
+                _buildActionButton(
+                  icon: LucideIcons.pencil,
+                  color: AppTheme.primaryYellow,
+                  onTap: onEdit,
+                  tooltip: 'Modifier',
+                ),
+              if (canEdit) const SizedBox(width: 8),
+              
+              _buildActionButton(
+                icon: LucideIcons.eye,
+                color: AppTheme.primaryGreen,
+                onTap: onView,
+                tooltip: 'Voir détails',
+              ),
+              const SizedBox(width: 8),
+              
+              if (canDelete)
+                _buildActionButton(
+                  icon: LucideIcons.trash2,
+                  color: AppTheme.primaryRed,
+                  onTap: onDelete,
+                  tooltip: 'Supprimer',
+                ),
+              if (canDelete) const SizedBox(width: 8),
+              
+              _buildActionButton(
+                icon: LucideIcons.mail,
+                color: Colors.blue,
+                onTap: onEmail,
+                tooltip: 'Email',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoleBadge(String role) {
+    Color color;
+    String label;
+    
+    switch (role) {
+      case 'admin':
+        color = AppTheme.primaryRed;
+        label = 'Admin';
+        break;
+      case 'moderateur':
+        color = Colors.orange;
+        label = 'Modérateur';
+        break;
+      case 'partenaire':
+        color = Colors.purple;
+        label = 'Partenaire';
+        break;
+      default:
+        color = AppTheme.primaryGreen;
+        label = 'Joueur';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    String? tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip ?? '',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(icon, size: 14, color: color),
+        ),
+      ),
+    );
+  }
+
+  String _formatScore(int score) {
+    if (score >= 1000000) {
+      return '${(score / 1000000).toStringAsFixed(1)}M';
+    } else if (score >= 1000) {
+      return '${(score / 1000).toStringAsFixed(1)}k';
+    }
+    return score.toString();
+  }
+}
+
+// ============================================
+// DIALOGS
+// ============================================
+
 class _UserEditDialog extends StatefulWidget {
   final UserAdmin user;
+  final UsersBloc bloc;
 
-  const _UserEditDialog({required this.user});
+  const _UserEditDialog({required this.user, required this.bloc});
 
   @override
   State<_UserEditDialog> createState() => _UserEditDialogState();
@@ -666,7 +775,7 @@ class _UserEditDialogState extends State<_UserEditDialog> {
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen),
           onPressed: () {
-            context.read<UsersBloc>().add(UsersStatusUpdateRequested(
+            widget.bloc.add(UsersStatusUpdateRequested(
               userId: widget.user.id,
               newStatus: _selectedStatus,
             ));
@@ -679,7 +788,6 @@ class _UserEditDialogState extends State<_UserEditDialog> {
   }
 }
 
-// Dialog pour voir les détails d'un utilisateur
 class _UserDetailsDialog extends StatelessWidget {
   final UserAdmin user;
 
@@ -688,55 +796,57 @@ class _UserDetailsDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Row(
         children: [
           CircleAvatar(
-            radius: 24,
-            backgroundColor: AppTheme.primaryYellow.withOpacity(0.2),
+            radius: 28,
+            backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.2),
             backgroundImage: user.avatar.isNotEmpty ? NetworkImage(user.avatar) : null,
             child: user.avatar.isEmpty
                 ? Text(
                     user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
                     style: const TextStyle(
-                      color: AppTheme.primaryYellow,
+                      color: AppTheme.primaryGreen,
                       fontWeight: FontWeight.bold,
-                      fontSize: 20,
+                      fontSize: 24,
                     ),
                   )
                 : null,
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(user.displayName),
-              Text(
-                user.roleLabel,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.normal,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.displayName,
+                  style: const TextStyle(fontSize: 18),
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                _buildRoleBadge(user.typeUtilisateur),
+              ],
+            ),
           ),
         ],
       ),
       content: SizedBox(
-        width: 450,
+        width: 500,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildDetailRow('ID', '#${user.id}'),
-            _buildDetailRow('Email', user.email),
-            _buildDetailRow('Pays', user.pays),
-            _buildDetailRow('Niveau', '${user.niveau}'),
-            _buildDetailRow('XP', '${user.xp}'),
-            _buildDetailRow('Parties jouées', '${user.partiesJouees}'),
-            _buildDetailRow('Parties gagnées', '${user.partiesGagnees}'),
-            _buildDetailRow('Classement', user.ranking > 0 ? '#${user.ranking}' : 'Non classé'),
-            _buildDetailRow('Statut', user.statutCompte),
-            _buildDetailRow('Inscrit le', _formatDate(user.dateCreation)),
+            const Divider(),
+            const SizedBox(height: 8),
+            _buildInfoRow(LucideIcons.hash, 'ID', '#${user.id}'),
+            _buildInfoRow(LucideIcons.mail, 'Email', user.email),
+            _buildInfoRow(LucideIcons.mapPin, 'Pays', user.pays),
+            _buildInfoRow(LucideIcons.star, 'Niveau', '${user.niveau}'),
+            _buildInfoRow(LucideIcons.zap, 'XP', '${user.xp}'),
+            _buildInfoRow(LucideIcons.gamepad2, 'Parties jouées', '${user.partiesJouees}'),
+            _buildInfoRow(LucideIcons.trophy, 'Parties gagnées', '${user.partiesGagnees}'),
+            _buildInfoRow(LucideIcons.award, 'Classement', user.ranking > 0 ? '#${user.ranking}' : 'Non classé'),
+            _buildInfoRow(LucideIcons.shieldCheck, 'Statut', user.statutCompte),
+            _buildInfoRow(LucideIcons.calendar, 'Inscrit le', _formatDate(user.dateCreation)),
           ],
         ),
       ),
@@ -749,17 +859,58 @@ class _UserDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildRoleBadge(String role) {
+    Color color;
+    String label;
+    
+    switch (role) {
+      case 'admin':
+        color = AppTheme.primaryRed;
+        label = 'Administrateur';
+        break;
+      case 'moderateur':
+        color = Colors.orange;
+        label = 'Modérateur';
+        break;
+      case 'partenaire':
+        color = Colors.purple;
+        label = 'Partenaire';
+        break;
+      default:
+        color = AppTheme.primaryGreen;
+        label = 'Joueur';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
+          Icon(icon, size: 18, color: AppTheme.textMuted),
+          const SizedBox(width: 12),
           SizedBox(
-            width: 140,
+            width: 120,
             child: Text(
               label,
-              style: TextStyle(
-                color: Colors.grey.shade600,
+              style: const TextStyle(
+                color: AppTheme.textMuted,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -769,6 +920,7 @@ class _UserDetailsDialog extends StatelessWidget {
               value,
               style: const TextStyle(
                 color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),

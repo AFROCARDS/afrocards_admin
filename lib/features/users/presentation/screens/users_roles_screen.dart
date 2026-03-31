@@ -15,6 +15,7 @@ class UsersRolesScreen extends StatefulWidget {
 
 class _UsersRolesScreenState extends State<UsersRolesScreen> {
   final TextEditingController _searchController = TextEditingController();
+  String? _selectedFilter;
 
   @override
   void initState() {
@@ -32,6 +33,16 @@ class _UsersRolesScreenState extends State<UsersRolesScreen> {
     context.read<UsersBloc>().add(UsersLoadRequested(
       refresh: true,
       search: _searchController.text,
+      typeFilter: _selectedFilter,
+    ));
+  }
+
+  void _onFilterChanged(String? filter) {
+    setState(() => _selectedFilter = filter);
+    context.read<UsersBloc>().add(UsersLoadRequested(
+      refresh: true,
+      typeFilter: filter,
+      search: _searchController.text,
     ));
   }
 
@@ -46,12 +57,12 @@ class _UsersRolesScreenState extends State<UsersRolesScreen> {
           _buildHeader(),
           const SizedBox(height: 24),
           
-          // Table des utilisateurs
+          // Liste des utilisateurs style "Top Joueurs"
           Expanded(
-            child: _buildUsersTable(),
+            child: _buildRolesList(),
           ),
           
-          // Bouton Enregistrer
+          // Bouton Enregistrer les modifications
           _buildSaveButton(),
         ],
       ),
@@ -62,7 +73,7 @@ class _UsersRolesScreenState extends State<UsersRolesScreen> {
     return Row(
       children: [
         const Text(
-          'Gestion des Utilisateurs',
+          'Gestion des Rôles',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -94,21 +105,21 @@ class _UsersRolesScreenState extends State<UsersRolesScreen> {
         ),
         const SizedBox(width: 12),
         
-        // Filtres
-        _buildFilterButton(),
+        // Filtres par rôle
+        _buildFilterDropdown(),
         const SizedBox(width: 12),
         
-        // Export
+        // Refresh
         _buildIconButton(
-          icon: LucideIcons.mail,
-          onTap: () {},
-          tooltip: 'Envoyer un email groupé',
+          icon: LucideIcons.refreshCw,
+          onTap: () => context.read<UsersBloc>().add(const UsersLoadRequested(refresh: true)),
+          tooltip: 'Actualiser',
         ),
       ],
     );
   }
 
-  Widget _buildFilterButton() {
+  Widget _buildFilterDropdown() {
     return Container(
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -117,12 +128,25 @@ class _UsersRolesScreenState extends State<UsersRolesScreen> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFE5E5E5)),
       ),
-      child: Row(
-        children: [
-          Icon(LucideIcons.filter, size: 16, color: Colors.grey.shade600),
-          const SizedBox(width: 8),
-          Icon(LucideIcons.chevronDown, size: 16, color: Colors.grey.shade600),
-        ],
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String?>(
+          value: _selectedFilter,
+          hint: Row(
+            children: [
+              Icon(LucideIcons.filter, size: 16, color: Colors.grey.shade600),
+              const SizedBox(width: 8),
+              Text('Tous les rôles', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+            ],
+          ),
+          items: const [
+            DropdownMenuItem(value: null, child: Text('Tous les rôles')),
+            DropdownMenuItem(value: 'admin', child: Text('Administrateurs')),
+            DropdownMenuItem(value: 'moderateur', child: Text('Modérateurs')),
+            DropdownMenuItem(value: 'joueur', child: Text('Joueurs')),
+            DropdownMenuItem(value: 'partenaire', child: Text('Partenaires')),
+          ],
+          onChanged: _onFilterChanged,
+        ),
       ),
     );
   }
@@ -151,7 +175,7 @@ class _UsersRolesScreenState extends State<UsersRolesScreen> {
     );
   }
 
-  Widget _buildUsersTable() {
+  Widget _buildRolesList() {
     return BlocBuilder<UsersBloc, UsersState>(
       builder: (context, state) {
         if (state.status == UsersStatus.loading && state.users.isEmpty) {
@@ -182,7 +206,7 @@ class _UsersRolesScreenState extends State<UsersRolesScreen> {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -190,332 +214,86 @@ class _UsersRolesScreenState extends State<UsersRolesScreen> {
           ),
           child: Column(
             children: [
-              // En-tête du tableau
-              _buildTableHeader(),
+              // Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Color(0xFFE5E5E5)),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(LucideIcons.shieldCheck, size: 20, color: AppTheme.primaryYellow),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Attribution des Rôles',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (state.pendingRoleChanges.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryYellow.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${state.pendingRoleChanges.length} modifications',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.primaryYellow,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${state.totalUsers} utilisateurs',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.primaryGreen,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               
-              // Corps du tableau
+              // Liste des utilisateurs
               Expanded(
                 child: state.users.isEmpty
                     ? _buildEmptyState()
-                    : ListView.separated(
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(12),
                         itemCount: state.users.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (context, index) {
-                          return _buildUserRow(state.users[index], state);
+                          return _RoleListItem(
+                            user: state.users[index],
+                            index: index,
+                            pendingRole: state.pendingRoleChanges[state.users[index].id],
+                          );
                         },
                       ),
               ),
               
               // Footer avec pagination
-              _buildTableFooter(state),
+              _buildPagination(state),
             ],
           ),
         );
       },
-    );
-  }
-
-  Widget _buildTableHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFE5E5E5)),
-        ),
-      ),
-      child: const Row(
-        children: [
-          SizedBox(width: 60, child: Text('Img', style: _headerStyle)),
-          SizedBox(width: 80, child: Text('Id', style: _headerStyle)),
-          Expanded(flex: 2, child: Text('Username', style: _headerStyle)),
-          Expanded(flex: 3, child: Text('Email', style: _headerStyle)),
-          SizedBox(width: 100, child: Text('Pays', style: _headerStyle)),
-          SizedBox(width: 100, child: Text('Statistics', style: _headerStyle)),
-          SizedBox(width: 160, child: Text('Rôle Actuel', style: _headerStyle)),
-          SizedBox(width: 80, child: Text('Actions', style: _headerStyle)),
-        ],
-      ),
-    );
-  }
-
-  static const _headerStyle = TextStyle(
-    fontSize: 13,
-    fontWeight: FontWeight.w600,
-    color: AppTheme.textSecondary,
-  );
-
-  Widget _buildUserRow(UserAdmin user, UsersState state) {
-    // Vérifier si ce user a un changement en attente
-    final pendingRole = state.pendingRoleChanges[user.id];
-    final currentRole = pendingRole ?? user.typeUtilisateur;
-    final hasChange = pendingRole != null;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      color: hasChange ? AppTheme.primaryYellow.withOpacity(0.05) : null,
-      child: Row(
-        children: [
-          // Avatar
-          SizedBox(
-            width: 60,
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: AppTheme.primaryYellow.withOpacity(0.2),
-              backgroundImage: user.avatar.isNotEmpty ? NetworkImage(user.avatar) : null,
-              child: user.avatar.isEmpty
-                  ? Text(
-                      user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
-                      style: const TextStyle(
-                        color: AppTheme.primaryYellow,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : null,
-            ),
-          ),
-          
-          // ID
-          SizedBox(
-            width: 80,
-            child: Text(
-              '#${user.id}',
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ),
-          
-          // Username
-          Expanded(
-            flex: 2,
-            child: Text(
-              user.displayName,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ),
-          
-          // Email
-          Expanded(
-            flex: 3,
-            child: Text(
-              user.email,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ),
-          
-          // Pays
-          SizedBox(
-            width: 100,
-            child: Text(
-              user.pays,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ),
-          
-          // Statistics (mini graph)
-          SizedBox(
-            width: 100,
-            child: _buildMiniStats(user),
-          ),
-          
-          // Rôle Actuel (Dropdown)
-          SizedBox(
-            width: 160,
-            child: _buildRoleDropdown(user, currentRole),
-          ),
-          
-          // Actions
-          SizedBox(
-            width: 80,
-            child: _buildActionButtons(user),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons(UserAdmin user) {
-    // Récupérer les permissions de l'utilisateur connecté
-    final authState = context.read<AuthBloc>().state;
-    final canDelete = authState is AuthAuthenticated ? authState.user.canDelete : false;
-
-    return Row(
-      children: [
-        // Voir - tout le monde peut voir
-        _buildActionButton(
-          icon: LucideIcons.eye,
-          color: AppTheme.primaryGreen,
-          onTap: () => _showUserDetails(user),
-          tooltip: 'Voir détails',
-        ),
-        const SizedBox(width: 8),
-        // Supprimer - seulement pour admin
-        if (canDelete)
-          _buildActionButton(
-            icon: LucideIcons.trash2,
-            color: AppTheme.primaryRed,
-            onTap: () => _showDeleteConfirmation(user),
-            tooltip: 'Supprimer',
-          ),
-      ],
-    );
-  }
-
-  Widget _buildRoleDropdown(UserAdmin user, String currentRole) {
-    // Récupérer les permissions de l'utilisateur connecté
-    final authState = context.read<AuthBloc>().state;
-    final canChangeRoles = authState is AuthAuthenticated ? authState.user.canChangeRoles : false;
-
-    return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: _getRoleColor(currentRole).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _getRoleColor(currentRole).withOpacity(0.3)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: currentRole,
-          isExpanded: true,
-          icon: Icon(
-            LucideIcons.chevronDown,
-            size: 16,
-            color: _getRoleColor(currentRole),
-          ),
-          style: TextStyle(
-            fontSize: 13,
-            color: _getRoleColor(currentRole),
-            fontWeight: FontWeight.w500,
-          ),
-          items: [
-            _buildRoleDropdownItem('admin', 'Administrateur'),
-            _buildRoleDropdownItem('moderateur', 'Modérateur'),
-            _buildRoleDropdownItem('joueur', 'Joueur'),
-            _buildRoleDropdownItem('partenaire', 'Partenaire'),
-          ],
-          // Désactivé pour les modérateurs
-          onChanged: canChangeRoles ? (newRole) {
-            if (newRole != null) {
-              context.read<UsersBloc>().add(UsersLocalRoleChanged(
-                userId: user.id,
-                newRole: newRole,
-              ));
-            }
-          } : null,
-        ),
-      ),
-    );
-  }
-
-  DropdownMenuItem<String> _buildRoleDropdownItem(String value, String label) {
-    return DropdownMenuItem(
-      value: value,
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: _getRoleColor(value),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(label),
-        ],
-      ),
-    );
-  }
-
-  Color _getRoleColor(String role) {
-    switch (role) {
-      case 'admin':
-        return AppTheme.primaryRed;
-      case 'moderateur':
-        return Colors.orange;
-      case 'partenaire':
-        return Colors.purple;
-      default:
-        return AppTheme.primaryGreen;
-    }
-  }
-
-  Widget _buildMiniStats(UserAdmin user) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildMiniProgressBar(
-                value: user.partiesGagnees / (user.partiesJouees > 0 ? user.partiesJouees : 1),
-                color: AppTheme.primaryGreen,
-              ),
-              const SizedBox(height: 4),
-              _buildMiniProgressBar(
-                value: (user.niveau / 100).clamp(0.0, 1.0),
-                color: AppTheme.primaryYellow,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMiniProgressBar({required double value, required Color color}) {
-    return Container(
-      height: 6,
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(3),
-      ),
-      child: FractionallySizedBox(
-        alignment: Alignment.centerLeft,
-        widthFactor: value.clamp(0.0, 1.0),
-        child: Container(
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(3),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-    String? tooltip,
-  }) {
-    return Tooltip(
-      message: tooltip ?? '',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(icon, size: 14, color: color),
-        ),
-      ),
     );
   }
 
@@ -538,9 +316,9 @@ class _UsersRolesScreenState extends State<UsersRolesScreen> {
     );
   }
 
-  Widget _buildTableFooter(UsersState state) {
+  Widget _buildPagination(UsersState state) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
         border: Border(
           top: BorderSide(color: Color(0xFFE5E5E5)),
@@ -549,12 +327,12 @@ class _UsersRolesScreenState extends State<UsersRolesScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Bouton page précédente
           if (state.currentPage > 1)
             TextButton.icon(
               onPressed: () {
                 context.read<UsersBloc>().add(UsersLoadRequested(
                   page: state.currentPage - 1,
+                  typeFilter: state.typeFilter,
                   search: state.search,
                 ));
               },
@@ -564,7 +342,6 @@ class _UsersRolesScreenState extends State<UsersRolesScreen> {
           
           const SizedBox(width: 16),
           
-          // Indicateur pages
           Text(
             'Page ${state.currentPage} sur ${state.totalPages}',
             style: TextStyle(
@@ -575,22 +352,22 @@ class _UsersRolesScreenState extends State<UsersRolesScreen> {
           
           const SizedBox(width: 16),
           
-          // Bouton Voir tout / page suivante
           if (state.currentPage < state.totalPages)
-            TextButton.icon(
+            TextButton(
               onPressed: () {
                 context.read<UsersBloc>().add(UsersLoadRequested(
                   page: state.currentPage + 1,
+                  typeFilter: state.typeFilter,
                   search: state.search,
                 ));
               },
-              icon: const Row(
+              child: const Row(
                 children: [
-                  Text('•••'),
-                  SizedBox(width: 8),
+                  Text('Voir plus'),
+                  SizedBox(width: 4),
+                  Icon(LucideIcons.chevronRight, size: 16),
                 ],
               ),
-              label: const Text('Voir tout'),
             ),
         ],
       ),
@@ -598,102 +375,396 @@ class _UsersRolesScreenState extends State<UsersRolesScreen> {
   }
 
   Widget _buildSaveButton() {
-    // Récupérer les permissions de l'utilisateur connecté
-    final authState = context.read<AuthBloc>().state;
-    final canChangeRoles = authState is AuthAuthenticated ? authState.user.canChangeRoles : false;
-
-    // Le modérateur ne voit pas le bouton d'enregistrement
-    if (!canChangeRoles) {
-      return const SizedBox.shrink();
-    }
-
     return BlocBuilder<UsersBloc, UsersState>(
       builder: (context, state) {
-        return Container(
-          padding: const EdgeInsets.only(top: 24),
-          child: Center(
-            child: SizedBox(
-              width: 280,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: state.hasPendingChanges && !state.isSubmitting
-                    ? () {
-                        context.read<UsersBloc>().add(const UsersRoleChangesSubmitted());
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Modifications enregistrées avec succès'),
-                            backgroundColor: AppTheme.primaryGreen,
-                          ),
-                        );
-                      }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: state.hasPendingChanges
-                      ? AppTheme.primaryRed
-                      : Colors.grey.shade300,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
+        final authState = context.read<AuthBloc>().state;
+        final canChangeRoles = authState is AuthAuthenticated 
+            ? authState.user.canChangeRoles 
+            : false;
+
+        if (!canChangeRoles || state.pendingRoleChanges.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () {
+                  context.read<UsersBloc>().add(const UsersClearPendingChanges());
+                },
+                icon: const Icon(LucideIcons.x, size: 16),
+                label: const Text('Annuler'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.grey.shade700,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
-                child: state.isSubmitting
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            'Enregistrer les Changements',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if (state.hasPendingChanges) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                '${state.pendingRoleChanges.length}',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
               ),
-            ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  // Sauvegarder toutes les modifications en attente
+                  for (final entry in state.pendingRoleChanges.entries) {
+                    context.read<UsersBloc>().add(UsersRoleUpdateRequested(
+                      userId: entry.key,
+                      newRole: entry.value,
+                    ));
+                  }
+                },
+                icon: const Icon(LucideIcons.check, size: 16, color: Colors.white),
+                label: Text(
+                  'Enregistrer (${state.pendingRoleChanges.length})',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+              ),
+            ],
           ),
         );
       },
     );
   }
+}
 
-  // Dialogs
-  void _showUserDetails(UserAdmin user) {
+// ============================================
+// ROLE LIST ITEM (Style Top Joueurs)
+// ============================================
+
+class _RoleListItem extends StatelessWidget {
+  final UserAdmin user;
+  final int index;
+  final String? pendingRole;
+
+  const _RoleListItem({
+    required this.user,
+    required this.index,
+    this.pendingRole,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final currentRole = pendingRole ?? user.typeUtilisateur;
+    final hasChange = pendingRole != null;
+    
+    // Couleurs selon le rang
+    final colors = [
+      const Color(0xFFFFD700), // Gold
+      const Color(0xFFC0C0C0), // Silver
+      const Color(0xFFCD7F32), // Bronze
+      AppTheme.textMuted,
+      AppTheme.textMuted,
+    ];
+
+    final authState = context.read<AuthBloc>().state;
+    final canChangeRoles = authState is AuthAuthenticated 
+        ? authState.user.canChangeRoles 
+        : false;
+    final canDelete = authState is AuthAuthenticated 
+        ? authState.user.canDelete 
+        : false;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: hasChange 
+            ? AppTheme.primaryYellow.withValues(alpha: 0.12)
+            : (index < 3 ? colors[index].withValues(alpha: 0.08) : Colors.grey.shade50),
+        borderRadius: BorderRadius.circular(12),
+        border: hasChange 
+            ? Border.all(color: AppTheme.primaryYellow.withValues(alpha: 0.5), width: 1)
+            : (index < 3 
+                ? Border.all(color: colors[index].withValues(alpha: 0.3), width: 1)
+                : null),
+      ),
+      child: Row(
+        children: [
+          // Rang
+          Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: colors[index < 5 ? index : 4],
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '${user.ranking > 0 ? user.ranking : index + 1}',
+              style: TextStyle(
+                color: index < 3 ? Colors.white : AppTheme.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          
+          // Avatar
+          CircleAvatar(
+            radius: 22,
+            backgroundImage: user.avatar.isNotEmpty ? NetworkImage(user.avatar) : null,
+            backgroundColor: _getRoleColor(currentRole).withValues(alpha: 0.2),
+            child: user.avatar.isEmpty
+                ? Text(
+                    user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
+                    style: TextStyle(
+                      color: _getRoleColor(currentRole),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 16),
+          
+          // Infos utilisateur
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      user.displayName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    if (hasChange) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryYellow.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'Modifié',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primaryYellow,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(LucideIcons.mail, size: 12, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Text(
+                      user.email,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          // Niveau
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryYellow.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(LucideIcons.star, size: 14, color: AppTheme.primaryYellow),
+                const SizedBox(width: 4),
+                Text(
+                  'Niv. ${user.niveau}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: AppTheme.primaryYellow,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          
+          // XP
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${_formatScore(user.xp)} XP',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: AppTheme.primaryGreen,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          
+          // Dropdown de rôle
+          Container(
+            width: 160,
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: _getRoleColor(currentRole).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: _getRoleColor(currentRole).withValues(alpha: 0.3)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: currentRole,
+                isExpanded: true,
+                icon: Icon(
+                  LucideIcons.chevronDown,
+                  size: 16,
+                  color: _getRoleColor(currentRole),
+                ),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: _getRoleColor(currentRole),
+                  fontWeight: FontWeight.w600,
+                ),
+                items: [
+                  _buildRoleDropdownItem('admin', 'Administrateur'),
+                  _buildRoleDropdownItem('moderateur', 'Modérateur'),
+                  _buildRoleDropdownItem('joueur', 'Joueur'),
+                  _buildRoleDropdownItem('partenaire', 'Partenaire'),
+                ],
+                onChanged: canChangeRoles ? (newRole) {
+                  if (newRole != null) {
+                    context.read<UsersBloc>().add(UsersLocalRoleChanged(
+                      userId: user.id,
+                      newRole: newRole,
+                    ));
+                  }
+                } : null,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          
+          // Actions
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildActionButton(
+                icon: LucideIcons.eye,
+                color: AppTheme.primaryGreen,
+                onTap: () => _showUserDetails(context, user),
+                tooltip: 'Voir détails',
+              ),
+              if (canDelete) ...[
+                const SizedBox(width: 8),
+                _buildActionButton(
+                  icon: LucideIcons.trash2,
+                  color: AppTheme.primaryRed,
+                  onTap: () => _showDeleteConfirmation(context, user),
+                  tooltip: 'Supprimer',
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  DropdownMenuItem<String> _buildRoleDropdownItem(String value, String label) {
+    return DropdownMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: _getRoleColor(value),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(label, style: TextStyle(color: _getRoleColor(value))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    String? tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip ?? '',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(icon, size: 14, color: color),
+        ),
+      ),
+    );
+  }
+
+  Color _getRoleColor(String role) {
+    switch (role) {
+      case 'admin':
+        return AppTheme.primaryRed;
+      case 'moderateur':
+        return Colors.orange;
+      case 'partenaire':
+        return Colors.purple;
+      default:
+        return AppTheme.primaryGreen;
+    }
+  }
+
+  String _formatScore(int score) {
+    if (score >= 1000000) {
+      return '${(score / 1000000).toStringAsFixed(1)}M';
+    } else if (score >= 1000) {
+      return '${(score / 1000).toStringAsFixed(1)}k';
+    }
+    return score.toString();
+  }
+
+  void _showUserDetails(BuildContext context, UserAdmin user) {
     showDialog(
       context: context,
       builder: (context) => _UserDetailsDialog(user: user),
     );
   }
 
-  void _showDeleteConfirmation(UserAdmin user) {
+  void _showDeleteConfirmation(BuildContext context, UserAdmin user) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer l\'utilisateur "${user.displayName}" ?'),
+        content: Text('Voulez-vous vraiment supprimer "${user.displayName}" ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -713,7 +784,10 @@ class _UsersRolesScreenState extends State<UsersRolesScreen> {
   }
 }
 
-// Dialog pour voir les détails d'un utilisateur
+// ============================================
+// USER DETAILS DIALOG
+// ============================================
+
 class _UserDetailsDialog extends StatelessWidget {
   final UserAdmin user;
 
@@ -722,55 +796,57 @@ class _UserDetailsDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Row(
         children: [
           CircleAvatar(
-            radius: 24,
-            backgroundColor: AppTheme.primaryYellow.withOpacity(0.2),
+            radius: 28,
+            backgroundColor: _getRoleColor(user.typeUtilisateur).withValues(alpha: 0.2),
             backgroundImage: user.avatar.isNotEmpty ? NetworkImage(user.avatar) : null,
             child: user.avatar.isEmpty
                 ? Text(
                     user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
-                    style: const TextStyle(
-                      color: AppTheme.primaryYellow,
+                    style: TextStyle(
+                      color: _getRoleColor(user.typeUtilisateur),
                       fontWeight: FontWeight.bold,
-                      fontSize: 20,
+                      fontSize: 24,
                     ),
                   )
                 : null,
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(user.displayName),
-              Text(
-                user.roleLabel,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.normal,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.displayName,
+                  style: const TextStyle(fontSize: 18),
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                _buildRoleBadge(user.typeUtilisateur),
+              ],
+            ),
           ),
         ],
       ),
       content: SizedBox(
-        width: 450,
+        width: 500,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildDetailRow('ID', '#${user.id}'),
-            _buildDetailRow('Email', user.email),
-            _buildDetailRow('Pays', user.pays),
-            _buildDetailRow('Niveau', '${user.niveau}'),
-            _buildDetailRow('XP', '${user.xp}'),
-            _buildDetailRow('Parties jouées', '${user.partiesJouees}'),
-            _buildDetailRow('Parties gagnées', '${user.partiesGagnees}'),
-            _buildDetailRow('Classement', user.ranking > 0 ? '#${user.ranking}' : 'Non classé'),
-            _buildDetailRow('Statut', user.statutCompte),
-            _buildDetailRow('Inscrit le', _formatDate(user.dateCreation)),
+            const Divider(),
+            const SizedBox(height: 8),
+            _buildInfoRow(LucideIcons.hash, 'ID', '#${user.id}'),
+            _buildInfoRow(LucideIcons.mail, 'Email', user.email),
+            _buildInfoRow(LucideIcons.mapPin, 'Pays', user.pays),
+            _buildInfoRow(LucideIcons.star, 'Niveau', '${user.niveau}'),
+            _buildInfoRow(LucideIcons.zap, 'XP', '${user.xp}'),
+            _buildInfoRow(LucideIcons.gamepad2, 'Parties jouées', '${user.partiesJouees}'),
+            _buildInfoRow(LucideIcons.trophy, 'Parties gagnées', '${user.partiesGagnees}'),
+            _buildInfoRow(LucideIcons.award, 'Classement', user.ranking > 0 ? '#${user.ranking}' : 'Non classé'),
+            _buildInfoRow(LucideIcons.shieldCheck, 'Statut', user.statutCompte),
+            _buildInfoRow(LucideIcons.calendar, 'Inscrit le', _formatDate(user.dateCreation)),
           ],
         ),
       ),
@@ -783,17 +859,58 @@ class _UserDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildRoleBadge(String role) {
+    Color color;
+    String label;
+    
+    switch (role) {
+      case 'admin':
+        color = AppTheme.primaryRed;
+        label = 'Administrateur';
+        break;
+      case 'moderateur':
+        color = Colors.orange;
+        label = 'Modérateur';
+        break;
+      case 'partenaire':
+        color = Colors.purple;
+        label = 'Partenaire';
+        break;
+      default:
+        color = AppTheme.primaryGreen;
+        label = 'Joueur';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
+          Icon(icon, size: 18, color: AppTheme.textMuted),
+          const SizedBox(width: 12),
           SizedBox(
-            width: 140,
+            width: 120,
             child: Text(
               label,
-              style: TextStyle(
-                color: Colors.grey.shade600,
+              style: const TextStyle(
+                color: AppTheme.textMuted,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -803,12 +920,26 @@ class _UserDetailsDialog extends StatelessWidget {
               value,
               style: const TextStyle(
                 color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Color _getRoleColor(String role) {
+    switch (role) {
+      case 'admin':
+        return AppTheme.primaryRed;
+      case 'moderateur':
+        return Colors.orange;
+      case 'partenaire':
+        return Colors.purple;
+      default:
+        return AppTheme.primaryGreen;
+    }
   }
 
   String _formatDate(DateTime date) {
