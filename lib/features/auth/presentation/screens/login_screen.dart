@@ -73,8 +73,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Logo AfroCards
                       Image.asset(
                         'assets/logo_afc.png',
-                        width: 250,
-                        height: 250,
+                        width: 500,
+                        height: 500,
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) {
                           return _buildLogoPlaceholder();
